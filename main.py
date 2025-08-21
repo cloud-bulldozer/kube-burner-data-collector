@@ -1,6 +1,7 @@
 """Console script for data_collector."""
 
 import os
+import re
 import sys
 import logging
 import argparse
@@ -61,8 +62,14 @@ def main():
         data = collector_instance.collect(from_date, to)
         for each_run in data:
             for _, run_json in each_run.items():
-                normalized_json = normalize(run_json, ",".join(input_config["exclude_normalization"]))
-                normalized_rows.append(normalized_json)
+                normalized_json = normalize(run_json,
+                                            input_config.get('target_filters_by_data', []),
+                                            input_config.get("target_field_extract_filters", []),
+                                            input_config.get("target_fields_to_reduce", []),
+                                            ",".join(input_config["exclude_normalization"]))
+                if normalized_json:
+                    normalized_rows.append(normalized_json)
+
     # Write to CSV
     if normalized_rows:
         fieldnames = sorted(set().union(*normalized_rows))

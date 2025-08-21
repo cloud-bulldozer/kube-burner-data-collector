@@ -1,5 +1,7 @@
 import re
 import logging
+import numpy as np
+import pandas as pd
 from typing import Dict, List
 from data_collector.utils import (
     strhash,
@@ -13,7 +15,7 @@ from data_collector.utils import (
 logger = logging.getLogger(__name__)
 
 DROP_LIST = ['metadata','uuid','metricName','labels','query', 'value', 'jobName', 'timestamp']
-LABELS_LIST = ["mode", "verb", "namespace", "resource", "container", "component", "endpoint"]
+NEST_ORDER = ["mode", "scope", "verb", "namespace", "component", "resource", "container", "endpoint"]
 DEFAULT_HASH = "xyz"
 
 
@@ -46,7 +48,7 @@ def process_json(metric: str, entries: dict, skip_patterns: List[re.Pattern], ou
         if label_hash not in grouped_metrics:
             grouped_metrics[label_hash] = {"value": 0.0}
             if labels:
-                grouped_metrics[label_hash]["labels"] = {k: labels[k] for k in LABELS_LIST if k in labels}
+                grouped_metrics[label_hash]["labels"] = {k: labels[k] for k in NEST_ORDER if k in labels}
 
         # Drop unneeded fields
         if "value" in entry:
@@ -75,7 +77,6 @@ def normalize_metrics(metrics: dict) -> dict:
     """Intermidiate normalization step to further reduce the json"""
 
     # Labels precedence order used for nesting
-    nest_order = ["mode", "verb", "namespace", "component", "resource", "container", "endpoint"]
     nested_metrics = {}
 
     for metric, entries in metrics:
@@ -86,7 +87,7 @@ def normalize_metrics(metrics: dict) -> dict:
             value = entry["value"]
 
             # Get available keys from labels, in nest_order
-            label_keys = [k for k in nest_order if k in labels]
+            label_keys = [k for k in NEST_ORDER if k in labels]
             if not label_keys:
                 # No labels at all, store directly under metric
                 existing = nested_metrics[metric]
@@ -136,7 +137,7 @@ def get_cluster_health(alerts: list, passed: bool) -> str:
         return "Yellow"
     return "Green"
 
-def normalize(metrics_data: dict, exclude_metrics: str):
+def normalize(metrics_data, data_filters, extract_filters, fields_to_reduce: dict, exclude_metrics: str):
     """Driver code to triger the execution"""
     skip_patterns = compile_exclude_patterns(exclude_metrics)
 
@@ -159,6 +160,63 @@ def normalize(metrics_data: dict, exclude_metrics: str):
         else:
             for key, value in metadata.get("jobConfig", {}).items():
                 flattened[f"jobConfig.{key}"] = value
+
+    # Filter rows by data filters (e.g., platform == AWS)
+    has_atleast_one_filter = False
+    if data_filters:
+        for filter in data_filters:
+            key, value = list(filter.items())[0]
+            if flattened.get(key) ==  value:
+                has_atleast_one_filter = True
+                break
+    if not has_atleast_one_filter:
+        return {}
+
+    # Extract matching fields (based on regex)
+    fields_to_keep = set()
+    fields_with_prefix = set()
+    if extract_filters:
+        for extract_filter in extract_filters:
+            key, value = list(extract_filter.items())[0]
+            key_pattern = re.compile(key)
+            value_pattern = re.compile(value)
+            for field in flattened.keys():
+                if key_pattern.match(field):
+                    fields_with_prefix.add(field)
+                    if value_pattern.match(field):
+                        fields_to_keep.add(field)
+    flattened = {k: v for k, v in flattened.items() if k not in fields_with_prefix - fields_to_keep}
+
+    # Reduce multiple fields into one target (based on regex)
+    if fields_to_reduce:
+        for field in fields_to_reduce:
+            key, target_key = list(field.items())[0]
+
+            # Find all matching keys
+            matching_items = {k: v for k, v in flattened.items() if re.match(key, k)}
+
+            if not matching_items:
+                continue
+
+            # Collect valid values
+            values = [v for v in matching_items.values() if v is not None and str(v) != "nan"]
+            if not values:
+                flattened[target_key] = None
+            else:
+                try:
+                    numeric_vals = pd.to_numeric(values, errors="coerce").dropna()
+                    if len(numeric_vals) > 0:
+                        flattened[target_key] = float(np.mean(numeric_vals))  # average
+                    else:
+                        flattened[target_key] = pd.Series(values).median()  # median
+                except Exception:
+                    flattened[target_key] = pd.Series(values).median()
+
+            # Drop the original matching keys, since we replaced them
+            for k in matching_items.keys():
+                if k != target_key:  # avoid removing the reduced one
+                    flattened.pop(k, None)
+
     alerts = metrics_data["metrics"]["alert"] if 'alert' in metrics_data["metrics"] else []
     flattened["cluster_health_score"] = get_cluster_health(alerts, metadata["passed"])
     return flattened
