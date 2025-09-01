@@ -1,10 +1,10 @@
 metadata:
 - clusterType
 - controlPlaneArch
-- elapsedTime
 - infraNodesCount
 - infraNodesType
 - ipsecMode
+- qps
 - burst
 - churnCycles
 - churnDelay
@@ -17,65 +17,39 @@ metadata:
 - jobType
 - maxWaitTimeout
 - metricsClosing
-- name
-- preLoadPeriod
-- qps
 - verifyObjects
 - waitForDeletion
 - waitWhenFinished
 - k8sVersion
 - masterNodesCount
 - masterNodesType
-- metricName
 - ocpMajorVersion
 - ocpVersion
 - passed
 - platform
-- publish
 - region
 - sdnType
 - totalNodes
-- uuid
 - workerArch
 - workerNodesCount
 - workerNodesType
+skip_metrics:
+  churnMetric: true
+  jobName.keyword: garbage-collection
+  jobConfig.name.keyword: garbage-collection
+job_summary_filters:
+  platform.keyword: AWS
+  jobConfig.name.keyword: cluster-density-v2
 metrics:
-- alert
-# - avg-ro-apicalls-latency
-# - avg-mutating-apicalls-latency
-# - 99thEtcdDiskBackendCommit
-# - 99thEtcdDiskWalFsync
-# - 99thEtcdRoundTripTime
-# - cpu-kube-controller-manager
-# - max-memory-sum-kube-controller-manager
-# - cpu-etcd
-# - max-memory-sum-etcd
-- cpu-kube-apiserver
-- max-memory-sum-kube-apiserver
-- cpu-masters
-- max-memory-sum-masters
-- cpu-workers
-- max-memory-sum-workers
-- podLatencyQuantilesMeasurement
-benchmark: cluster-density-v2
-exclude_normalization:
-- LatencyMeasurement
-- jobSummary
-- nodeRoles
-- nodeStatus
-- alert
-- -start
-target_filters_by_data:
-- platform: AWS
-target_field_extract_filters:
-# - "^avg-ro-apicalls-latency": '^avg-ro-apicalls-latency.*_byLabelScope_resource(?:_|$).*'
-# - "^avg-ro-apicalls-latency": '^avg-ro-apicalls-latency.*_byLabelScope_namespace(?:_|$).*'
-# - "^avg-mutating-apicalls-latency": '^avg-mutating-apicalls-latency.*_byLabelScope_resource(?:_|$).*'
-# - "^avg-mutating-apicalls-latency": '^avg-mutating-apicalls-latency.*_byLabelScope_namespace(?:_|$).*'
-- "^podLatencyQuantilesMeasurement": 'podLatencyQuantilesMeasurement_Ready_P99'
-# target_fields_to_reduce:
-# - '^avg-ro-apicalls-latency.*_byLabelScope_resource(?:_|$).*': "avg-ro-apicalls-latency_byLabelScope_resource"
-# - '^avg-ro-apicalls-latency.*_byLabelScope_namespace(?:_|$).*': "avg-ro-apicalls-latency_byLabelScope_namespace"
-# - '^avg-mutating-apicalls-latency.*_byLabelScope_resource(?:_|$).*': "avg-mutating-apicalls-latency_byLabelScope_resource"
-# - '^avg-mutating-apicalls-latency.*_byLabelScope_namespace(?:_|$).*': "avg-mutating-apicalls-latency_byLabelScope_namespace"
+  - name: podLatencyQuantilesMeasurement
+    value_field: P99
+    description: "The pod latency quantiles"
+  - name: cpu-kube-apiserver
+  - name: max-memory-sum-kube-apiserver
+  - name: cpu-masters
+  - name: max-memory-sum-masters
+  - name: cpu-workers
+  - name: max-memory-sum-workers
+discardFields: [P95, P90, P50, max, min, avg, metadata, uuid, timestamp, query, uuid]
 output_prefix: output
+s3_folder_name: cluster-density-v2

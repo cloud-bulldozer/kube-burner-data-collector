@@ -1,12 +1,12 @@
 """Console script for data_collector."""
 
 import os
-import re
 import sys
 import logging
 import argparse
 import urllib3
 import csv
+import pandas as pd
 from data_collector import __version__, collector
 from data_collector.config import Config
 from data_collector.normalize import normalize
@@ -28,12 +28,10 @@ def main():
                         default=os.environ.get("LOG_LEVEL", "INFO").upper(), 
                         help="Logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL). Can also be set via LOG_LEVEL env var"
     )
-    sub_parsers = parser.add_subparsers(dest="command")
-    collect = sub_parsers.add_parser("collect", help="Collect ES data")
-    collect.add_argument("--es-server", action="store", help="ES Server endpoint", required=True)
-    collect.add_argument("--es-index", action="store", help="ES Index name", required=True)
-    collect.add_argument("--config", action="store", help="Configuration file")
-    collect.add_argument(
+    parser.add_argument("--es-server", action="store", help="ES Server endpoint", required=True)
+    parser.add_argument("--es-index", action="store", help="ES Index name", required=True)
+    parser.add_argument("--config", action="store", help="Configuration file")
+    parser.add_argument(
         "--from",
         action="store",
         help="Start date, in epoch seconds",
@@ -41,7 +39,7 @@ def main():
         type=int,
         dest="from_date",
     )
-    collect.add_argument(
+    parser.add_argument(
         "--to",
         action="store",
         help="End date, in epoch seconds",
@@ -53,29 +51,20 @@ def main():
     logger = logging.getLogger(__name__)
     logger.info(f"CLI args: {args}")
     from_date, to = parse_timerange(args.from_date, args.to)
-    normalized_rows = []
-    if args.command == "collect":
-        config = Config(args.config)
-        logger.debug(f"Processing input configuration: {config}")
-        input_config = config.parse()
-        collector_instance = collector.Collector(args.es_server, args.es_index, input_config)
-        data = collector_instance.collect(from_date, to)
-        for each_run in data:
-            for _, run_json in each_run.items():
-                normalized_json = normalize(run_json,
-                                            input_config.get('target_filters_by_data', []),
-                                            input_config.get("target_field_extract_filters", []),
-                                            input_config.get("target_fields_to_reduce", []),
-                                            ",".join(input_config["exclude_normalization"]))
-                if normalized_json:
-                    normalized_rows.append(normalized_json)
-
-    # Write to CSV
-    if normalized_rows:
-        fieldnames = sorted(set().union(*normalized_rows))
-        for idx, chunk in enumerate(split_list_into_chunks(normalized_rows, CHUNK_SIZE), start=1):
+    config = Config(args.config)
+    logger.debug(f"Processing input configuration: {config}")
+    input_config = config.parse()
+    collector_instance = collector.Collector(args.es_server, args.es_index, input_config)
+    data = collector_instance.collect(from_date, to)
+    df = pd.DataFrame()
+    for each_run in data:
+        for uuid, run_json in each_run.items():
+            uuid_df = normalize(run_json, input_config)
+            df = pd.concat([df, uuid_df], ignore_index=True)
+    if not df.empty:
+        for idx, chunk in enumerate(split_list_into_chunks(df, CHUNK_SIZE), start=1):
             filename = f"{input_config['output_prefix']}_{from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}_{to.strftime('%Y-%m-%dT%H:%M:%SZ')}_chunk_{idx}.csv"
-            upload_csv_to_s3(chunk, fieldnames, S3_BUCKET, input_config["benchmark"], filename)
+            upload_csv_to_s3(chunk, S3_BUCKET, input_config["s3_folder_name"], filename)
     return 0
 
 if __name__ == "__main__":
