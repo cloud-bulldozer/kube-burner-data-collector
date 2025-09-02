@@ -12,7 +12,7 @@ from data_collector.config import Config
 from data_collector.normalize import normalize
 from data_collector.s3 import upload_csv_to_s3
 from data_collector.utils import split_list_into_chunks, parse_timerange
-from data_collector.constants import S3_BUCKET, CHUNK_SIZE, VALID_LOG_LEVELS
+from data_collector.constants import VALID_LOG_LEVELS
 from data_collector.logging import configure_logging
 import datetime
 
@@ -62,9 +62,9 @@ def main():
             uuid_df = normalize(run_json, input_config)
             df = pd.concat([df, uuid_df], ignore_index=True)
     if not df.empty:
-        for idx, chunk in enumerate(split_list_into_chunks(df, CHUNK_SIZE), start=1):
+        for idx, chunk in enumerate(split_list_into_chunks(df, input_config["chunk_size"]), start=1):
             filename = f"{input_config['output_prefix']}_{from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}_{to.strftime('%Y-%m-%dT%H:%M:%SZ')}_chunk_{idx}.csv"
-            upload_csv_to_s3(chunk, S3_BUCKET, input_config["s3_folder_name"], filename)
+            upload_csv_to_s3(chunk, input_config["s3_bucket"], input_config["s3_folder"], filename)
     return 0
 
 if __name__ == "__main__":

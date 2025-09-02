@@ -33,10 +33,6 @@ metadata:
 - workerArch
 - workerNodesCount
 - workerNodesType
-skip_metrics:
-  churnMetric: true
-  jobName.keyword: garbage-collection
-  jobConfig.name.keyword: garbage-collection
 job_summary_filters:
   platform.keyword: AWS
   jobConfig.name.keyword: cluster-density-v2
@@ -50,6 +46,12 @@ metrics:
   - name: max-memory-sum-masters
   - name: cpu-workers
   - name: max-memory-sum-workers
+skip_metrics:
+  churnMetric: true
+  jobName.keyword: garbage-collection
+  jobConfig.name.keyword: garbage-collection
 discardFields: [P95, P90, P50, max, min, avg, metadata, uuid, timestamp, query, uuid]
 output_prefix: output
-s3_folder_name: cluster-density-v2
+s3_folder: cluster-density-v2
+s3_bucket: kube-burner-ai-s3-bucket
+chunk_size: 10000
