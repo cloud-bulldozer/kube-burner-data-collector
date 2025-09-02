@@ -5,10 +5,10 @@ from typing import Dict, List, Any
 
 logger = logging.getLogger(__name__)
 
-def split_list_into_chunks(lst, chunk_size):
+def split_list_into_chunks(df, chunk_size):
     """Splits a list into given chunk sizes"""
-    for idx in range(0, len(lst), chunk_size):
-        yield lst[idx:idx + chunk_size]
+    for idx in range(0, len(df), chunk_size):
+        yield df[idx:idx + chunk_size]
 
 
 def parse_timerange(from_date_dt: datetime, to_dt: datetime):
