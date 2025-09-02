@@ -32,7 +32,7 @@ def normalize(metrics_data: Dict, config: Dict) -> pd.DataFrame:
     """
     run_df = pd.DataFrame()
     metadata = metrics_data.pop("metadata", {})
-    jobConfig = metadata.pop("jobConfig", {})
+    job_config = metadata.pop("jobConfig", {})
     for metric_name, metric_samples in metrics_data["metrics"].items():
         for metric in config["metrics"]:
             if metric["name"] == metric_name:
@@ -50,7 +50,7 @@ def normalize(metrics_data: Dict, config: Dict) -> pd.DataFrame:
             else:
                 aggregated_metric_samples["value"] += metric_sample["value"] / 2
         aggregated_metric_samples.update(metadata)
-        aggregated_metric_samples.update(jobConfig)
+        aggregated_metric_samples.update(job_config)
         aggregated_metric_samples["cluster_health_score"] = get_cluster_health(aggregated_metric_samples["passed"], aggregated_metric_samples.pop("execution_errors", ""))
         aggregated_metric_samples["description"] = metric_config.get("description", "")
         # We convert the list of dictionaries into a DataFrame

@@ -15,7 +15,6 @@ metadata:
 - iterationsPerNamespace
 - jobIterations
 - jobType
-- maxWaitTimeout
 - metricsClosing
 - verifyObjects
 - waitForDeletion
@@ -50,7 +49,7 @@ skip_metrics:
   churnMetric: true
   jobName.keyword: garbage-collection
   jobConfig.name.keyword: garbage-collection
-discardFields: [P95, P90, P50, max, min, avg, metadata, uuid, timestamp, query, uuid]
+discard_fields: [P95, P90, P50, max, min, avg, metadata, uuid, timestamp, query, uuid]
 output_prefix: output
 s3_folder: cluster-density-v2
 s3_bucket: kube-burner-ai-s3-bucket
