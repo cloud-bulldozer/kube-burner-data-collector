@@ -49,6 +49,7 @@ def normalize(metrics_data: Dict, config: Dict) -> pd.DataFrame:
                 aggregated_metric_samples = metric_sample
             else:
                 aggregated_metric_samples["value"] += metric_sample["value"] / 2
+        rename_metric_field(metric_config, aggregated_metric_samples)
         aggregated_metric_samples.update(metadata)
         aggregated_metric_samples.update(job_config)
         aggregated_metric_samples["cluster_health_score"] = get_cluster_health(aggregated_metric_samples["passed"], aggregated_metric_samples.pop("execution_errors", ""))
@@ -57,3 +58,9 @@ def normalize(metrics_data: Dict, config: Dict) -> pd.DataFrame:
         df = pd.DataFrame([aggregated_metric_samples])
         run_df = pd.concat([run_df, df], ignore_index=True)
     return run_df
+
+
+def rename_metric_field(metric_config: Dict, metric_sample: Dict):
+    for k, v in metric_config.get("rename", {}).items():
+        if k in metric_sample:
+            metric_sample[v] = metric_sample.pop(k)

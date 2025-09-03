@@ -26,6 +26,7 @@ A configuration file is stored at [metrics.yml](config/metrics.yml). And has the
 - `metrics`: List of metrics (data-collector uses the job summaries UUIDs to pull these metrics) to normalize
   - `name`: Name of the metric, i.e: `metricName.keyword: metric_name_in_config`
   - `value_field`: Name of the field that contains the value, defaults to `value`
+  - `rename`: Field name to rename
   - `description`: Description of the metric, will be added to the normalized output
 - `skip_metrics`: Metrics with the following fields will be skipped:
 - `discard_fields`: List of fields to discard from normalized output.

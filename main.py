@@ -10,7 +10,7 @@ import pandas as pd
 from data_collector import __version__, collector
 from data_collector.config import Config
 from data_collector.normalize import normalize
-from data_collector.s3 import upload_csv_to_s3
+from data_collector import output
 from data_collector.utils import split_list_into_chunks, parse_timerange
 from data_collector.constants import VALID_LOG_LEVELS
 from data_collector.logging import configure_logging
@@ -46,6 +46,14 @@ def main():
         type=int,
         default=datetime.datetime.now(datetime.UTC).timestamp(),
     )
+    parser.add_argument(
+        "--output",
+        action="store",
+        help="Output type",
+        choices=["s3", "file"],
+        type=str,
+        default="s3",
+    )
     args = parser.parse_args()
     configure_logging(args.log_level)
     logger = logging.getLogger(__name__)
@@ -64,7 +72,10 @@ def main():
     if not df.empty:
         for idx, chunk in enumerate(split_list_into_chunks(df, input_config["chunk_size"]), start=1):
             filename = f"{input_config['output_prefix']}_{from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}_{to.strftime('%Y-%m-%dT%H:%M:%SZ')}_chunk_{idx}.csv"
-            upload_csv_to_s3(chunk, input_config["s3_bucket"], input_config["s3_folder"], filename)
+            if args.output == "s3":
+                output.upload_csv_to_s3(chunk, input_config["s3_bucket"], input_config["s3_folder"], filename)
+            else:
+                output.write_to_file(chunk, filename)
     return 0
 
 if __name__ == "__main__":

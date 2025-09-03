@@ -23,3 +23,8 @@ def upload_csv_to_s3(chunk_df: pd.DataFrame, bucket, foldername, filename):
         tmp.close()
         os.remove(tmp.name)
         logger.info(f"🧹 Temporary file {tmp.name} deleted")
+
+def write_to_file(chunk_df: pd.DataFrame, filename: str):
+    with open(filename, "w") as f:
+        chunk_df.to_csv(f, index=False)
+    logger.info(f"✅ Output written in file {filename}")
