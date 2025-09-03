@@ -21,18 +21,18 @@ class Collector:
         from_timestamp = from_date.strftime("%Y-%m-%dT%H:%M:%SZ")
         to_timestamp = to.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        logger.info(f"Elasticsearch index: {self.es_index}, benchmark: {self.config['benchmark']}")
-        
+        logger.info(f"Elasticsearch index: {self.es_index}")
+        must = [
+            Q("range", **{"timestamp": {"gte": from_timestamp, "lte": to_timestamp}})
+        ]
+        for k, v in self.config.get("job_summary_filters", {}).items():
+            must.append(Q("term", **{k: v}))
         query = Q(
             "bool",
-            must_not=[Q("term", **{"jobConfig.name.keyword": "garbage-collection"})],
-            must=[
-                Q("term", **{"jobConfig.name.keyword": self.config["benchmark"]}),
-                Q("range", **{"timestamp": {"gte": from_timestamp, "lte": to_timestamp}}),
-            ],
+            must=must,
+            must_not=[Q("term", **{"jobConfig.name.keyword": "garbage-collection"})]
         )
-
-        logger.debug(f"Constructed Elasticsearch query: {query.to_dict()}")
+        logger.info(f"Fetching kube-burner job summaries using query: {query.to_dict()}")
 
         page_size = 100
         sort_field = "timestamp"
@@ -57,7 +57,6 @@ class Collector:
 
                 if not hits:
                     break
-
                 for hit in hits:
                     run_data = {}
                     jobSummary = hit.to_dict()
@@ -88,7 +87,6 @@ class Collector:
 
                     data.append(run_data)
                     total_hits += 1
-
                 # Prepare for next page
                 search_after = hits[-1].meta.sort
 
@@ -103,16 +101,23 @@ class Collector:
     def _metrics_by_uuid(self, uuid: str):
         """Collects the list of metrics for an uuid"""
         metrics = {}
-        input_list = self.config.get("metrics", {})
-        metric_filter = [Q("term", **{"metricName.keyword": metric}) for metric in input_list]
-        should_query = Q("bool", should=metric_filter)
-        query = Q("bool", must_not=[Q("term", **{"jobConfig.name.keyword": "garbage-collection"})], should=should_query)
+        must_not_filter = []
+        metrics_list = self.config.get("metrics", {})
+        metric_filter = [
+            Q("term", **{"metricName.keyword": metric["name"]})
+            for metric in metrics_list
+        ]
+        must_not_filter = [
+            Q("term", **{k: v})
+            for k, v in self.config.get("skip_metrics", {}).items()
+        ]
+        query = Q("bool", should=metric_filter, must_not=must_not_filter)
         s = Search(using=self.os_client, index=self.es_index).filter("term", **{"uuid.keyword": uuid}).query(query)
-        logger.info(f"Running query: {s.to_dict()}")
+        logger.debug(f"Running query: {s.to_dict()}")
         for hit in s.scan():
             datapoint = hit.to_dict()
             if datapoint["metricName"] not in metrics:
                 metrics[datapoint["metricName"]] = [datapoint]
             else:
                 metrics[datapoint["metricName"]].append(datapoint)
-        return metrics, len(metrics) == len(input_list)
+        return metrics, len(metrics) == len(metrics_list)

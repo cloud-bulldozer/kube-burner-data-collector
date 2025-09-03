@@ -3,16 +3,15 @@ import csv
 import boto3
 import logging
 import tempfile
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-def upload_csv_to_s3(chunk_rows, fieldnames, bucket, foldername, filename):
+def upload_csv_to_s3(chunk_df: pd.DataFrame, bucket, foldername, filename):
     """Uploads a CSV file to S3"""
     tmp = tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False)
     try:
-        writer = csv.DictWriter(tmp, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(chunk_rows)
+        chunk_df.to_csv(tmp, index=False)
         tmp.flush()
 
         # Upload to S3
@@ -24,3 +23,8 @@ def upload_csv_to_s3(chunk_rows, fieldnames, bucket, foldername, filename):
         tmp.close()
         os.remove(tmp.name)
         logger.info(f"🧹 Temporary file {tmp.name} deleted")
+
+def write_to_file(chunk_df: pd.DataFrame, filename: str):
+    with open(filename, "w") as f:
+        chunk_df.to_csv(f, index=False)
+    logger.info(f"✅ Output written in file {filename}")
