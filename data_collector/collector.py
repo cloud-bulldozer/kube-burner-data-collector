@@ -57,7 +57,6 @@ class Collector:
 
                 if not hits:
                     break
-
                 for hit in hits:
                     run_data = {}
                     jobSummary = hit.to_dict()
@@ -108,7 +107,7 @@ class Collector:
         should_query = Q("bool", should=metric_filter)
         query = Q("bool", must_not=[Q("term", **{"jobConfig.name.keyword": "garbage-collection"})], should=should_query)
         s = Search(using=self.os_client, index=self.es_index).filter("term", **{"uuid.keyword": uuid}).query(query)
-        logger.info(f"Running query: {s.to_dict()}")
+        logger.debug(f"Running query: {s.to_dict()}")
         for hit in s.scan():
             datapoint = hit.to_dict()
             if datapoint["metricName"] not in metrics:

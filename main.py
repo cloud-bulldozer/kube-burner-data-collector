@@ -6,13 +6,12 @@ import sys
 import logging
 import argparse
 import urllib3
-import csv
 from data_collector import __version__, collector
 from data_collector.config import Config
 from data_collector.normalize import normalize
-from data_collector.s3 import upload_csv_to_s3
+from data_collector import output
 from data_collector.utils import split_list_into_chunks, parse_timerange
-from data_collector.constants import S3_BUCKET, CHUNK_SIZE, VALID_LOG_LEVELS
+from data_collector.constants import VALID_LOG_LEVELS
 from data_collector.logging import configure_logging
 import datetime
 
@@ -46,6 +45,14 @@ def main():
         type=int,
         default=datetime.datetime.now(datetime.UTC).timestamp(),
     )
+    parser.add_argument(
+        "--output",
+        action="store",
+        help="Output type",
+        choices=["s3", "file"],
+        type=str,
+        default="s3",
+    )
     args = parser.parse_args()
     configure_logging(args.log_level)
     logger = logging.getLogger(__name__)
@@ -70,9 +77,12 @@ def main():
     # Write to CSV
     if normalized_rows:
         fieldnames = sorted(set().union(*normalized_rows))
-        for idx, chunk in enumerate(split_list_into_chunks(normalized_rows, CHUNK_SIZE), start=1):
+        for idx, chunk in enumerate(split_list_into_chunks(normalized_rows, input_config["chunk_size"]), start=1):
             filename = f"{input_config['output_prefix']}_{from_date.strftime('%Y-%m-%dT%H:%M:%SZ')}_{to.strftime('%Y-%m-%dT%H:%M:%SZ')}_chunk_{idx}.csv"
-            upload_csv_to_s3(chunk, fieldnames, S3_BUCKET, input_config["benchmark"], filename)
+            if args.output == "s3":
+                output.upload_csv_to_s3(chunk, fieldnames, input_config["s3_bucket"], input_config["s3_folder"], filename)
+            else:
+                output.write_to_file(chunk, fieldnames, filename)
     return 0
 
 if __name__ == "__main__":

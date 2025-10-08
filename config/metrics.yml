@@ -79,3 +79,6 @@ target_field_extract_filters:
 # - '^avg-mutating-apicalls-latency.*_byLabelScope_resource(?:_|$).*': "avg-mutating-apicalls-latency_byLabelScope_resource"
 # - '^avg-mutating-apicalls-latency.*_byLabelScope_namespace(?:_|$).*': "avg-mutating-apicalls-latency_byLabelScope_namespace"
 output_prefix: output
+s3_folder: cluster-density-v2
+s3_bucket: kube-burner-ai-s3-bucket
+chunk_size: 10000
