@@ -28,12 +28,10 @@ def main():
                         default=os.environ.get("LOG_LEVEL", "INFO").upper(), 
                         help="Logging level (e.g., DEBUG, INFO, WARNING, ERROR, CRITICAL). Can also be set via LOG_LEVEL env var"
     )
-    sub_parsers = parser.add_subparsers(dest="command")
-    collect = sub_parsers.add_parser("collect", help="Collect ES data")
-    collect.add_argument("--es-server", action="store", help="ES Server endpoint", required=True)
-    collect.add_argument("--es-index", action="store", help="ES Index name", required=True)
-    collect.add_argument("--config", action="store", help="Configuration file")
-    collect.add_argument(
+    parser.add_argument("--es-server", action="store", help="ES Server endpoint", required=True)
+    parser.add_argument("--es-index", action="store", help="ES Index name", required=True)
+    parser.add_argument("--config", action="store", help="Configuration file")
+    parser.add_argument(
         "--from",
         action="store",
         help="Start date, in epoch seconds",
@@ -41,7 +39,7 @@ def main():
         type=int,
         dest="from_date",
     )
-    collect.add_argument(
+    parser.add_argument(
         "--to",
         action="store",
         help="End date, in epoch seconds",
@@ -54,21 +52,20 @@ def main():
     logger.info(f"CLI args: {args}")
     from_date, to = parse_timerange(args.from_date, args.to)
     normalized_rows = []
-    if args.command == "collect":
-        config = Config(args.config)
-        logger.debug(f"Processing input configuration: {config}")
-        input_config = config.parse()
-        collector_instance = collector.Collector(args.es_server, args.es_index, input_config)
-        data = collector_instance.collect(from_date, to)
-        for each_run in data:
-            for _, run_json in each_run.items():
-                normalized_json = normalize(run_json,
-                                            input_config.get('target_filters_by_data', []),
-                                            input_config.get("target_field_extract_filters", []),
-                                            input_config.get("target_fields_to_reduce", []),
-                                            ",".join(input_config["exclude_normalization"]))
-                if normalized_json:
-                    normalized_rows.append(normalized_json)
+    config = Config(args.config)
+    logger.debug(f"Processing input configuration: {config}")
+    input_config = config.parse()
+    collector_instance = collector.Collector(args.es_server, args.es_index, input_config)
+    data = collector_instance.collect(from_date, to)
+    for each_run in data:
+        for _, run_json in each_run.items():
+            normalized_json = normalize(run_json,
+                                        input_config.get('target_filters_by_data', []),
+                                        input_config.get("target_field_extract_filters", []),
+                                        input_config.get("target_fields_to_reduce", []),
+                                        ",".join(input_config["exclude_normalization"]))
+            if normalized_json:
+                normalized_rows.append(normalized_json)
 
     # Write to CSV
     if normalized_rows:
