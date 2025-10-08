@@ -16,18 +16,6 @@ def upload_csv_to_s3(chunk_rows: list, fieldnames: list, bucket: str, foldername
         bucket (str): Name of the S3 bucket to upload to.
         foldername (str): S3 folder/prefix path where the file will be stored.
         filename (str): Name of the file to create in S3.
-    
-    Returns:
-        None
-    
-    Raises:
-        boto3.exceptions.Boto3Error: If S3 upload fails.
-        OSError: If temporary file operations fail.
-    
-    Example:
-        >>> rows = [{'name': 'John', 'age': 30}, {'name': 'Jane', 'age': 25}]
-        >>> fields = ['name', 'age']
-        >>> upload_csv_to_s3(rows, fields, 'my-bucket', 'data', 'users.csv')
     """
     tmp = tempfile.NamedTemporaryFile(mode='w+', newline='', delete=False)
     try:
