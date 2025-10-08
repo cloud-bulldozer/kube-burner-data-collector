@@ -11,6 +11,10 @@ pip install -r requirements.txt
 python setup.py install
 ```
 
-## Features
+## Running
 
-TODO
+It can be run from the command line as:
+
+```shell
+$ data_collector --es-server 'https://elastic-search-fqdn' --es-index 'kube-burner*' --config config/metrics.yml --from $(date -d "2 months ago" +%s)
+```
