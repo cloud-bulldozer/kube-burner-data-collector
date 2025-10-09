@@ -3,15 +3,17 @@ import time
 from opensearchpy import OpenSearch
 from opensearch_dsl import Search, Q
 from datetime import datetime
+from data_collector.instance_mapper import InstanceMapper
 
 logger = logging.getLogger(__name__)
 
 class Collector:
-    def __init__(self, es_server: str, es_index: str, config: dict):
+    def __init__(self, es_server: str, es_index: str, config: dict, instance_mapper: InstanceMapper = None):
         """Init method for instance variables"""
         self.config = config
         self.es_index = es_index
         self.os_client = OpenSearch(es_server, verify_certs=False, http_compress=True, timeout=30)
+        self.instance_mapper = instance_mapper
         logging.getLogger("opensearch").setLevel(logging.WARNING)
 
     def collect(self, from_date: datetime, to: datetime):
@@ -78,6 +80,10 @@ class Collector:
                             run_data[uuid]["metadata"][field] = jobSummary[field]
                         elif "jobConfig" in jobSummary and field in jobSummary["jobConfig"]:
                             run_data[uuid]["metadata"].setdefault("jobConfig", {})[field] = jobSummary["jobConfig"][field]
+
+                    if self.instance_mapper:
+                        instance_specs = self.instance_mapper.map_instance_types_from_metadata(run_data[uuid]["metadata"])
+                        run_data[uuid]["metadata"].update(instance_specs)
 
                     metrics, count_verified = self._metrics_by_uuid(uuid)
                     if count_verified:

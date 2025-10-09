@@ -15,6 +15,7 @@ from data_collector.utils import split_list_into_chunks, parse_timerange
 from data_collector.constants import S3_BUCKET, CHUNK_SIZE, VALID_LOG_LEVELS
 from data_collector.logging import configure_logging
 import datetime
+from data_collector.instance_mapper import InstanceMapper
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -31,6 +32,7 @@ def main():
     parser.add_argument("--es-server", action="store", help="ES Server endpoint", required=True)
     parser.add_argument("--es-index", action="store", help="ES Index name", required=True)
     parser.add_argument("--config", action="store", help="Configuration file")
+    parser.add_argument("--instance-dict", action="store", help="Instance dictionary file")
     parser.add_argument(
         "--from",
         action="store",
@@ -55,7 +57,13 @@ def main():
     config = Config(args.config)
     logger.debug(f"Processing input configuration: {config}")
     input_config = config.parse()
-    collector_instance = collector.Collector(args.es_server, args.es_index, input_config)
+    if args.instance_dict:
+        logger.info(f"Instance dictionary file provided: {args.instance_dict}")
+        instance_mapper = InstanceMapper(args.instance_dict)
+    else:
+        logger.warning("No instance dictionary file provided, hardware specs won't be populated")
+        instance_mapper = None
+    collector_instance = collector.Collector(args.es_server, args.es_index, input_config, instance_mapper)
     data = collector_instance.collect(from_date, to)
     for each_run in data:
         for _, run_json in each_run.items():

@@ -16,5 +16,5 @@ python setup.py install
 It can be run from the command line as:
 
 ```shell
-$ data_collector --es-server 'https://elastic-search-fqdn' --es-index 'kube-burner*' --config config/metrics.yml --from $(date -d "2 months ago" +%s)
+$ data_collector --es-server 'https://elastic-search-fqdn' --es-index 'kube-burner*' --config config/metrics.yml --from $(date -d "2 months ago" +%s) --instance-dict data/aws_ec2_instances.json
 ```
