@@ -13,23 +13,21 @@ logger = logging.getLogger(__name__)
 class InstanceMapper:
     """Maps AWS EC2 instance types to their specifications."""
     
-    def __init__(self, aws_instances_file: str = "data/aws_ec2_instances.json"):
+    def __init__(self, aws_instances_file_path: str = None):
         """
         Initialize the instance mapper with AWS EC2 instances data.
         
         Args:
             aws_instances_file: Path to the AWS EC2 instances JSON file
         """
-        self.aws_instances_file = aws_instances_file
+        self.aws_instances_file_path = aws_instances_file_path
         self.instance_specs = {}
         self._load_aws_instances()
     
     def _load_aws_instances(self) -> None:
         """Load AWS EC2 instances data from JSON file."""
         try:
-            # Get the project root directory
-            project_root = Path(__file__).parent.parent
-            instances_path = project_root / self.aws_instances_file
+            instances_path = Path(self.aws_instances_file_path)
             
             if not instances_path.exists():
                 raise FileNotFoundError(f"AWS instances file not found: {instances_path}")
@@ -37,7 +35,6 @@ class InstanceMapper:
             with open(instances_path, 'r', encoding='utf-8') as f:
                 instances_data = json.load(f)
             
-            # Create a lookup dictionary for faster access
             for instance in instances_data:
                 instance_type = instance.get('instance_type')
                 if instance_type:
@@ -70,24 +67,22 @@ class InstanceMapper:
     
     def map_instance_types_from_metadata(self, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Map instance types from metadata (flattened data structure).
+        Map instance types from metadata.
         
         Args:
-            metadata: Flattened metadata containing instance type information
+            metadata: Metadata containing instance type information
             
         Returns:
-            Dictionary with mapped instance specifications in flat structure
+            Dictionary with mapped instance specifications
         """
         mapped_data = {}
         
-        # Define node types and their prefixes
         node_types = [
             ('masterNodesType', 'masterNode'),
             ('workerNodesType', 'workerNode'),
             ('infraNodesType', 'infraNode')
         ]
         
-        # Map each node type
         for node_type_key, prefix in node_types:
             instance_type = metadata.get(node_type_key)
             if instance_type:
