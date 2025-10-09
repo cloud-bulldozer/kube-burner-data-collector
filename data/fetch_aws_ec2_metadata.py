@@ -8,11 +8,13 @@ import sys
 import os
 import subprocess
 import tempfile
+import logging
 
+logger = logging.getLogger("metadata-fetcher")
 
 def fetch_fresh_instances():
     """
-    Fetch fresh instances.json from the source URL and return the data directly.
+    Fetch fresh instances.json from the source URL.
     All downloaded files are automatically cleaned up.
     
     Returns:
@@ -20,11 +22,11 @@ def fetch_fresh_instances():
     """
     url = "https://instances.vantagestaging.sh/www_pre_build.tar.gz"
     
-    print(f"Fetching fresh instances data from: {url}")
+    logger.info(f"Fetching fresh instances data from: {url}")
     
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            print("Downloading and extracting data...")
+            logger.info("Downloading and extracting data...")
             
             cmd = f"curl -L {url} | tar -xzf - -C {temp_dir}"
             result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
@@ -37,11 +39,11 @@ def fetch_fresh_instances():
             if not os.path.exists(instances_file):
                 raise Exception("instances.json not found at expected path: www/instances.json")
             
-            print("Parsing instances data...")
+            logger.info("Parsing instances data...")
             with open(instances_file, 'r', encoding='utf-8') as f:
                 instances = json.load(f)
             
-            print(f"Successfully fetched and parsed {len(instances)} instances")
+            logger.info(f"Successfully fetched and parsed {len(instances)} instances")
             return instances
             
     except subprocess.CalledProcessError as e:
@@ -69,7 +71,7 @@ def parse_instances(instances_data, output_file):
     ]
     
     try:
-        print(f"Processing {len(instances_data)} instances")
+        logger.info(f"Processing {len(instances_data)} instances")
         
         distilled_instances = []
         
@@ -88,17 +90,17 @@ def parse_instances(instances_data, output_file):
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(distilled_instances, f, indent=2, ensure_ascii=False)
         
-        print(f"Successfully created distilled instances file: {output_file}")
-        print(f"Extracted {len(distilled_instances)} instances with {len(required_fields)} fields each")
+        logger.info(f"Successfully created distilled instances file: {output_file}")
+        logger.info(f"Extracted {len(distilled_instances)} instances with {len(required_fields)} fields each")
         
-        print("\nSample of first 3 distilled instances:")
+        logger.info("\nSample of first 3 distilled instances:")
         for i, instance in enumerate(distilled_instances[:3]):
-            print(f"\nInstance {i+1}:")
+            logger.info(f"\nInstance {i+1}:")
             for field, value in instance.items():
-                print(f"  {field}: {value}")
+                logger.info(f"  {field}: {value}")
         
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         sys.exit(1)
 
 
@@ -124,15 +126,15 @@ Examples:
     args = parser.parse_args()
     
     try:
-        print("Fetching fresh instances data...")
+        logger.info("Fetching fresh instances data...")
         instances_data = fetch_fresh_instances()
         
         parse_instances(instances_data, args.output_file)
         
-        print("All temporary files have been automatically cleaned up.")
+        logger.info("Done!")
         
     except Exception as e:
-        print(f"Error: {e}")
+        logger.error(f"Error: {e}")
         sys.exit(1)
 
 
