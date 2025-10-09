@@ -39,6 +39,9 @@ metadata:
 - workerArch
 - workerNodesCount
 - workerNodesType
+job_summary_filters:
+  platform.keyword: AWS
+  jobConfig.name.keyword: cluster-density-v2
 metrics:
 - alert
 # - avg-ro-apicalls-latency
@@ -57,7 +60,6 @@ metrics:
 - cpu-workers
 - max-memory-sum-workers
 - podLatencyQuantilesMeasurement
-benchmark: cluster-density-v2
 exclude_normalization:
 - LatencyMeasurement
 - jobSummary

@@ -23,18 +23,14 @@ class Collector:
         from_timestamp = from_date.strftime("%Y-%m-%dT%H:%M:%SZ")
         to_timestamp = to.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-        logger.info(f"Elasticsearch index: {self.es_index}, benchmark: {self.config['benchmark']}")
-        
-        query = Q(
-            "bool",
-            must_not=[Q("term", **{"jobConfig.name.keyword": "garbage-collection"})],
-            must=[
-                Q("term", **{"jobConfig.name.keyword": self.config["benchmark"]}),
-                Q("range", **{"timestamp": {"gte": from_timestamp, "lte": to_timestamp}}),
-            ],
-        )
-
-        logger.debug(f"Constructed Elasticsearch query: {query.to_dict()}")
+        logger.info(f"Elasticsearch index: {self.es_index}")
+        must = [
+            Q("range", **{"timestamp": {"gte": from_timestamp, "lte": to_timestamp}})
+        ]
+        for k, v in self.config.get("job_summary_filters", {}).items():
+            must.append(Q("term", **{k: v}))
+        query = Q("bool", must=must)
+        logger.info(f"Fetching kube-burner job summaries using query: {query.to_dict()}")
 
         page_size = 100
         sort_field = "timestamp"
